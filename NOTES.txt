@@ -8,3 +8,8 @@ The only other preparation I've already done is to register the Twitter username
 
 It is twenty past nine on the evening of Wednesday, 2 March 2011. I'm about to check this file into git, and start the timer. The remainder of this file will consist of time-stamped entries as design decisions are made or problems arise.
 
+[Wed Mar  2 21:25:07 GMT 2011]
+I note that the author name appears in the git commit log, so if you wish to review this without discovering my identity you will need to redact that. Perhaps egrep -v '^Author: ' would do it?
+
+[Wed Mar  2 21:26:57 GMT 2011]
+Let's try a bit of README-driven development. I'll start a README.txt file documenting how this (presently imaginary) piece of software works, and then aim for convergence of the description and the reality –– mostly by modifying the reality, but tweaking the description where necessary as well.
