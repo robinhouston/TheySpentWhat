@@ -19,3 +19,6 @@ Start with a description of the basic information flow. The advantages of this d
  - It makes it easy to test the core function, represented by the "theyspentwhat" process, without using Twitter or needing to mock the Twitter APIs.
  - The Twitter-related helper processes seem likely to be generally useful, for other projects.
 
+[Wed Mar  2 21:48:12 GMT 2011]
+Let's try and find the most interesting interpretation of every query, if the query is ambiguous. In the context of spending data, "most interesting" ought to be approximable by "involving the largest amount of money".
+
