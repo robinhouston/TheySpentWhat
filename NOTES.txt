@@ -22,3 +22,9 @@ Start with a description of the basic information flow. The advantages of this d
 [Wed Mar  2 21:48:12 GMT 2011]
 Let's try and find the most interesting interpretation of every query, if the query is ambiguous. In the context of spending data, "most interesting" ought to be approximable by "involving the largest amount of money".
 
+[Wed Mar  2 22:04:13 GMT 2011]
+First pass description of tweet syntax. Note that both the names given in this example are partial: the official name of the council is "London Borough of Islington", and the company is called "Alphatrack Systems Limited". This much flexibility is a sine qua non: we can't expect anyone to use the full names if the system is to be even remotely usable. The syntax should be as fluid as possible, so ideally queries like "Islington Alphatrack" or "Alphatrack Islington" should also work, triggered by the fact that one of the words is the name of a council and the other is the name of a company.
+
+I'm still attracted to the vague idea that ambiguous queries should be resolved to the most interesting of their possible interpretations, but it may be unrealistic to attempt something like that on such a tight deadline. Definitely a refinement to be added once a simpler version is working, anyway!
+
+
