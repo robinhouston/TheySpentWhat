@@ -1,0 +1,10 @@
+In the spirit of open data, I have decided to embrace radical transparency and document my development process in detail. I'll send you the whole git repository, rather than just the end result, so you can see the timeline and any stalls and missteps along the way
+
+I'm going to treat the three-hour suggestion as a deadline, though I'll extend the deadline rather than sending you something broken if it comes down to a choice between the two.
+
+A couple of days ago I had a look at the available sources of data on local government spending. It seemed clear that Chris Taggart has done a considerable job collating the data from different sources and putting them into a common format, and that it would be foolish to try and redo this work (on a tight deadline) unless evidence emerges of serious problems with Chris's data. On the other hand, the JSON/XML interface on Openly Local is apparently ill-suited for the sorts of queries we will need. So our preliminary decision -- which may need to be revisited if this approach proves troublesome -- is to use the downloadable data file from http://openlylocal.com/councils/spending.csv.zip and process it into queriable form locally.
+
+The only other preparation I've already done is to register the Twitter username @theyspentwhat, and to register a Twitter application of the same name. This account and application will be used for the Twitter integration.
+
+It is twenty past nine on the evening of Wednesday, 2 March 2011. I'm about to check this file into git, and start the timer. The remainder of this file will consist of time-stamped entries as design decisions are made or problems arise.
+
