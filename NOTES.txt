@@ -47,3 +47,11 @@ The CSV file we're using has a field called "payee_resource_uri", which could be
 
 For now this is just a caveat.
 
+[Wed Mar  2 23:37:05 GMT 2011]
+First draft data import script, which at least approximately works.
+
+(I'm imagining that the final version will use sorted sets, so we can pull out the largest transaction of a particular type. This version doesn't.)
+
+It doesn't look as though I'll have anything very good within the three hour limit, at this rate. I'll see if I can round out the complete system in a sketchy way in the next forty minutes, and come back to it tomorrow evening. The downside of radical transparency: I can't pretend this never happened...
+
+

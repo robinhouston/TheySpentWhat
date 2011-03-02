@@ -1,0 +1,94 @@
+#!/usr/bin/python
+
+# Built-in libraries
+import csv
+import logging
+import re
+
+# Third-party libraries
+import redis # From https://github.com/andymccurdy/redis-py
+
+def main(args):
+  from optparse import OptionParser
+  parser = OptionParser(usage = "usage: %prog [options] spending.csv")
+  parser.add_option("-v", "--verbose",
+                    action="store_true", default=False,
+                    help="print detailed progress information")
+  parser.add_option("", "--redis-host",
+                    action="store",
+                    default="localhost",
+                    help="host name for Redis server; defaults to %default")
+  parser.add_option("", "--redis-port",
+                    action="store",
+                    type="int",
+                    default=6379,
+                    help="port number for Redis server; defaults to %default")
+  parser.add_option("", "--redis-db",
+                    action="store",
+                    type="int",
+                    default=0,
+                    help="database number for Redis; defaults to %default")
+  
+  (options, args) = parser.parse_args(list(args))
+  
+  logging.basicConfig(level = logging.DEBUG if options.verbose else logging.INFO)
+  
+  if len(args) != 1:
+    parser.error("wrong number of arguments")
+  spending_csv_filename = args[0]
+  
+  # Connect to the Redis server
+  r = redis.Redis(host=options.redis_host, port=options.redis_port, db=options.redis_db)
+  r.flushdb() # Delete all existing data from this database
+  
+  spending_csv_fh = open(spending_csv_filename, 'r')
+  spending_csv_r = csv.reader(spending_csv_fh)
+  
+  known_suppliers = set()
+  known_organisations = set() # "Organisations" means councils
+  
+  date_re = re.compile(r"^(\d\d\d\d)-(\d\d)-(\d\d)$")
+  header_row = spending_csv_r.next()
+  line_number = 1
+  for data_row in spending_csv_r:
+    line_number += 1
+    if line_number % 10000 == 0:
+      logging.info("Processed %d,000 lines", line_number/1000)
+    
+    d = dict(zip(header_row, data_row))
+    
+    council_id = d["organisation_openlylocal_id"]
+    supplier_id = d["supplier_openlylocal_id"]
+    
+    if supplier_id not in known_suppliers:
+      r.hset("suppliers", supplier_id, d["supplier_name"])
+      if d["payee_resource_uri"]:
+        r.hset("payee_resource_uri_by_supplier",
+          supplier_id, d["payee_resource_uri"])
+      known_suppliers.add(supplier_id)
+    
+    if council_id not in known_organisations:
+      r.hset("organisations", council_id, d["organisation_name"])
+      known_organisations.add(council_id)
+    
+    date_mo = date_re.match(d["date"])
+    value_in_pennies = int(round(float(d["value"]) * 100))
+    
+    if date_mo is None:
+      logging.error("Failed to parse date '%s' on line %d", d["date"], line_number)
+      continue
+    
+    year, month, day = date_mo.groups()
+    
+    r.hincrby("total-cy", "%s-%s" % (council_id, year), value_in_pennies)
+    r.hincrby("total-cym", "%s-%s-%s" % (council_id, year, month), value_in_pennies)
+    r.hincrby("total-sy", "%s-%s" % (supplier_id, year), value_in_pennies)
+    r.hincrby("total-sym", "%s-%s-%s" % (supplier_id, year, month), value_in_pennies)
+    r.hincrby("total-csy", "%s-%s-%s" % (council_id, supplier_id, year), value_in_pennies)
+    r.hincrby("total-csym", "%s-%s-%s-%s" % (council_id, supplier_id, year, month), value_in_pennies)
+  
+  spending_csv_fh.close()
+
+if __name__ == "__main__":
+  import sys
+  main(sys.argv[1:])
