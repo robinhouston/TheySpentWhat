@@ -27,4 +27,23 @@ First pass description of tweet syntax. Note that both the names given in this e
 
 I'm still attracted to the vague idea that ambiguous queries should be resolved to the most interesting of their possible interpretations, but it may be unrealistic to attempt something like that on such a tight deadline. Definitely a refinement to be added once a simpler version is working, anyway!
 
+[Wed Mar  2 22:10:54 GMT 2011]
+Okay, about 45 minutes have elapsed. It's probably time to write some code. Let's start with one part that could prove troublesome: pulling the data into a queriable format. The raw uncompressed CSV file is < 1GB, so it's perfectly reasonable to think about keeping the whole data set in RAM. On that basis the first thing I'll try is to pull the data into Redis, which ought at least to be nice and fast. Let's say we'll bucket the spending by council, supplier, and month.
+
+[Wed Mar  2 22:54:00 GMT 2011]
+An observation: The Openly Local data sometimes use different supplier IDs for the same company. For example, BT appear as:
+
+ - http://openlylocal.com/suppliers/16196
+ - http://openlylocal.com/suppliers/143834
+ - http://openlylocal.com/suppliers/196367
+ - http://openlylocal.com/suppliers/212112
+ - http://openlylocal.com/suppliers/212113
+ - http://openlylocal.com/suppliers/212666
+ - http://openlylocal.com/suppliers/239038
+
+probably among others. Some but not all of these can be related to the same company by the "payee" information. For example http://openlylocal.com/suppliers/196367.json and http://openlylocal.com/suppliers/212113.json have payee_id = 60.
+
+The CSV file we're using has a field called "payee_resource_uri", which could be used to correlate suppliers. However it is often blank.
+
+For now this is just a caveat.
 
