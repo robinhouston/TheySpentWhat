@@ -54,4 +54,12 @@ First draft data import script, which at least approximately works.
 
 It doesn't look as though I'll have anything very good within the three hour limit, at this rate. I'll see if I can round out the complete system in a sketchy way in the next forty minutes, and come back to it tomorrow evening. The downside of radical transparency: I can't pretend this never happened...
 
+[Thu Mar  3 00:09:29 GMT 2011]
+The (self-imposed) three-hour deadline has defeated me.
+
+I tried to find a nice open-source library that supports the Twitter streaming API, since I thought that was the only way I could manage it quickly enough. First I tried https://github.com/hoisie/twitterstream (for the Go language), but that requires https://github.com/hoisie/httplib.go, which in turn will not build with the current version of Go.
+
+Then I looked for Python libraries (http://dev.twitter.com/pages/libraries#python), but none of them have documented support for the streaming API, that I could find.
+
+So I'll do it the old-fashioned way -- which is probably what I ought to have done in the first place -- and then return to this tomorrow.
 
