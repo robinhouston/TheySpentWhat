@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 
 import json
 import logging
@@ -25,12 +25,17 @@ TIMEOUT = 60 * 60 # One hour
 #    on startup
 
 class AccountListener(tweepy.StreamListener):
-  def __init__(self, api, account_name):
+  def __init__(self, api, account_name, own_user_id):
     super(AccountListener, self).__init__(api)
     self.__account_name = account_name
+    self.__own_user_id = own_user_id
   
   def on_data(self, data):
-    text_lc = json.loads(data)["text"].lower()
+    tweet = json.loads(data)
+    if tweet["user"]["id_str"] == self.__own_user_id:
+      return # Don't include tweets that we posted
+    
+    text_lc = tweet["text"].lower()
     if text_lc.startswith("@" + self.__account_name) \
     or text_lc.startswith(".@" + self.__account_name):
       print data
@@ -48,11 +53,12 @@ class AccountListener(tweepy.StreamListener):
     return False
 
 class TweetStreamer(object):
-  def __init__(self, tweepy_api):
+  def __init__(self, tweepy_api, own_user_id):
     self.tweepy_api = tweepy_api
+    self.own_user_id = own_user_id
   
   def print_tweets_addressed_to(self, account_name):
-    listener = AccountListener(self.tweepy_api, account_name)
+    listener = AccountListener(self.tweepy_api, account_name, self.own_user_id)
     while True:
       # This will return on timeout, so we run it in a loop.
       # See comment above.
@@ -64,7 +70,7 @@ class TweetStreamer(object):
 
 def main(args):
   from optparse import OptionParser
-  parser = OptionParser(usage = "usage: %prog [options]")
+  parser = OptionParser(usage = "usage: %prog [options] @account_name")
   parser.add_option("", "--credentials",
                     action="store", default="twitter.json",
                     help="name of file containing Twitter credentials in JSON format (default: %default)")
@@ -79,8 +85,12 @@ def main(args):
   
   logging.basicConfig(level = logging.DEBUG if options.verbose else logging.INFO)
   
-  if len(args) != 0:
+  if len(args) != 1:
     parser.error("wrong number of arguments")
+  
+  account_name = args[0]
+  if not account_name.startswith('@'):
+    parser.error("Account name '%s' does not start with @" % (account_name,))
   
   if options.trace_http:
     tweepy.debug()
@@ -94,7 +104,10 @@ def main(args):
   auth = tweepy.OAuthHandler(config["consumer_key"], config["consumer_secret"])
   auth.set_access_token(config["user_oauth_token"], config["user_oauth_token_secret"])
   
-  TweetStreamer(tweepy.API(auth)).print_tweets_addressed_to(config["account_name"])
+  TweetStreamer(
+    tweepy.API(auth),
+    own_user_id = config["user_id"],
+  ).print_tweets_addressed_to(account_name[1:])
 
 if __name__ == "__main__":
   main(sys.argv[1:])
