@@ -63,3 +63,8 @@ Then I looked for Python libraries (http://dev.twitter.com/pages/libraries#pytho
 
 So I'll do it the old-fashioned way -- which is probably what I ought to have done in the first place -- and then return to this tomorrow.
 
+[Thu Mar  3 21:15:01 GMT 2011]
+My biggest mistake yesterday was to rush in the hope of meeting the self-imposed three-hour deadline. I should have abandoned it as soon as it became obvious I was not going to meet it, rather than starting to make poor decisions in a hurry.
+
+Having just had a calmer look, it's clear that the Tweepy library for Python is an excellent piece of software that does everything we need. I should have looked at the source code before, rather than skimming the online documentation: the code is beautiful. So that's the Twitter integration needs sorted. Now for the fun part!
+

@@ -1,15 +1,100 @@
-#!/bin/bash
+#!/usr/bin/python
 
-# Just about the simplest possible implementation of the twitter-search
-# client specified in README.txt.
-#
-# This is not production-ready, because it does not deal elegantly with
-# disconnections or other varieties of failure. A reliable service ought,
-# at the very least, to check on startup for tweets that were addressed to
-# us since the last time we ran. As things stand, any tweets addressed to us
-# while we were not running will go unanswered forever.
+import json
+import logging
+import os
+import re
+import sys
+from types import MethodType as instancemethod
 
-while true
-do
-  curl -d track="$1" http://stream.twitter.com/1/statuses/filter.json -utheyspentwhat:Q9ovnUWUXfOJ
-done
+# The WDDS root directory is the parent of the directory this script is in
+WDDS_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+WDDS_LIB = os.path.join(WDDS_ROOT, "lib")
+WDDS_ETC = os.path.join(WDDS_ROOT, "etc")
+
+# Load bundled libraries
+sys.path = [WDDS_LIB] + sys.path
+import tweepy
+import tweepy.models
+
+# Constants
+TIMEOUT = 60 * 60 # One hour
+
+# TODO
+#  - Backfill option, to pull out tweets we have missed
+#    on startup
+
+class AccountListener(tweepy.StreamListener):
+  def __init__(self, api, account_name):
+    super(AccountListener, self).__init__(api)
+    self.__account_name = account_name
+  
+  def on_data(self, data):
+    text_lc = json.loads(data)["text"].lower()
+    if text_lc.startswith("@" + self.__account_name) \
+    or text_lc.startswith(".@" + self.__account_name):
+      print data
+  
+  def on_timeout(self):
+    # The tweepy timeout handling has a bug when using OAuth: it
+    # attempts to establish a new connection using the same HTTP
+    # headers as previously, including the Authorization header.
+    # 
+    # Unfortunately this fails, because the oauth_timestamp is no
+    # longer correct and the oauth_nonce has been used before.
+    #
+    # Therefore we return False here, which causes the whole method
+    # to return, and implement a retry loop ourselves.
+    return False
+
+class TweetStreamer(object):
+  def __init__(self, tweepy_api):
+    self.tweepy_api = tweepy_api
+  
+  def print_tweets_addressed_to(self, account_name):
+    listener = AccountListener(self.tweepy_api, account_name)
+    while True:
+      # This will return on timeout, so we run it in a loop.
+      # See comment above.
+      tweepy.Stream(
+        self.tweepy_api.auth,
+        listener,
+        timeout = TIMEOUT,
+      ).filter(track = ["@" + account_name])
+
+def main(args):
+  from optparse import OptionParser
+  parser = OptionParser(usage = "usage: %prog [options]")
+  parser.add_option("", "--credentials",
+                    action="store", default="twitter.json",
+                    help="name of file containing Twitter credentials in JSON format (default: %default)")
+  parser.add_option("-v", "--verbose",
+                    action="store_true", default=False,
+                    help="print detailed progress information")
+  parser.add_option("", "--trace-http",
+                    action="store_true", default=False,
+                    help="enable HTTP tracing")
+  
+  (options, args) = parser.parse_args(list(args))
+  
+  logging.basicConfig(level = logging.DEBUG if options.verbose else logging.INFO)
+  
+  if len(args) != 0:
+    parser.error("wrong number of arguments")
+  
+  if options.trace_http:
+    tweepy.debug()
+  
+  # Now create the tweepy object, and enter the main loop
+  if os.path.isabs(options.credentials):
+    config = json.load(open(options.credentials, "r"))
+  else:
+    config = json.load(open(os.path.join(WDDS_ETC, options.credentials), "r"))
+  
+  auth = tweepy.OAuthHandler(config["consumer_key"], config["consumer_secret"])
+  auth.set_access_token(config["user_oauth_token"], config["user_oauth_token_secret"])
+  
+  TweetStreamer(tweepy.API(auth)).print_tweets_addressed_to(config["account_name"])
+
+if __name__ == "__main__":
+  main(sys.argv[1:])
