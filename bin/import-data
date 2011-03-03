@@ -5,8 +5,13 @@ import csv
 import logging
 import re
 
-# Third-party libraries
-import redis # From https://github.com/andymccurdy/redis-py
+# The WDDS root directory is the parent of the directory this script is in
+WDDS_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+WDDS_LIB = os.path.join(WDDS_ROOT, "lib")
+
+# Load bundled libraries
+sys.path = [WDDS_LIB] + sys.path
+import redis
 
 def main(args):
   from optparse import OptionParser
