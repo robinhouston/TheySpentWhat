@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Just about the simplest possible implementation of the twitter-search
+# client specified in README.txt.
+#
+# This is not production-ready, because it does not deal elegantly with
+# disconnections or other varieties of failure. A reliable service ought,
+# at the very least, to check on startup for tweets that were addressed to
+# us since the last time we ran. As things stand, any tweets addressed to us
+# while we were not running will go unanswered forever.
+
+while true
+do
+  curl -d track="$1" http://stream.twitter.com/1/statuses/filter.json -utheyspentwhat:Q9ovnUWUXfOJ
+done
