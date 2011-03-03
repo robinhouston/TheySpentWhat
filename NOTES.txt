@@ -68,3 +68,10 @@ My biggest mistake yesterday was to rush in the hope of meeting the self-imposed
 
 Having just had a calmer look, it's clear that the Tweepy library for Python is an excellent piece of software that does everything we need. I should have looked at the source code before, rather than skimming the online documentation: the code is beautiful. So that's the Twitter integration needs sorted. Now for the fun part!
 
+[Thu Mar  3 22:31:42 GMT 2011]
+A bug in Tweepy made that a bit more interesting than it should have been...
+
+[Thu Mar  3 23:36:54 GMT 2011]
+The whole Twitter flow now works, using the pipeline from README.txt.
+It still doesn't actually *do* anything apart from echo back the question in reverse: that will have to be a job for Saturday morning. Next time I need to write a Twitter bot it's going to be eeeeasy now! :-)
+

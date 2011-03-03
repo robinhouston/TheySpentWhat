@@ -1,0 +1,74 @@
+#!/usr/bin/python -u
+
+import json
+import logging
+import os
+import re
+import sys
+
+# The WDDS root directory is the parent of the directory this script is in
+WDDS_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+WDDS_LIB = os.path.join(WDDS_ROOT, "lib")
+
+# Load bundled libraries
+sys.path = [WDDS_LIB] + sys.path
+import redis
+
+class DataMiner(object):
+  def __init__(self, redis_connection):
+    self.r = redis_connection
+  
+  def compose_answer(self, question):
+    # XXXX - stub method: just reverses the first 100 chars of the input
+    return question[100::-1]
+  
+  def run(self):
+    blank_line_re = re.compile(r"^\s*$")
+    while True:
+      line = sys.stdin.readline()
+      if not line:
+        break
+      if blank_line_re.match(line):
+        continue # Ignore blank lines
+      
+      tweet = json.loads(line)
+      answer = self.compose_answer(tweet["text"])
+      print json.dumps({
+        "status": "@%s %s" % (tweet["user"]["screen_name"], answer),
+        "in_reply_to_status_id": tweet["id_str"],
+      })
+
+def main(args):
+  from optparse import OptionParser
+  parser = OptionParser(usage = "usage: %prog [options] spending.csv")
+  parser.add_option("-v", "--verbose",
+                    action="store_true", default=False,
+                    help="print detailed progress information")
+  parser.add_option("", "--redis-host",
+                    action="store",
+                    default="localhost",
+                    help="host name for Redis server; defaults to %default")
+  parser.add_option("", "--redis-port",
+                    action="store",
+                    type="int",
+                    default=6379,
+                    help="port number for Redis server; defaults to %default")
+  parser.add_option("", "--redis-db",
+                    action="store",
+                    type="int",
+                    default=0,
+                    help="database number for Redis; defaults to %default")
+  
+  (options, args) = parser.parse_args(list(args))
+  
+  logging.basicConfig(level = logging.DEBUG if options.verbose else logging.INFO)
+  
+  if len(args) != 0:
+    parser.error("wrong number of arguments")
+  
+  r = redis.Redis(host=options.redis_host, port=options.redis_port, db=options.redis_db)
+  
+  DataMiner(r).run()
+
+if __name__ == "__main__":
+  main(sys.argv[1:])
