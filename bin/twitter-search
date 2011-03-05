@@ -3,9 +3,7 @@
 import json
 import logging
 import os
-import re
 import sys
-from types import MethodType as instancemethod
 
 # The WDDS root directory is the parent of the directory this script is in
 WDDS_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), os.path.pardir))
@@ -15,7 +13,6 @@ WDDS_ETC = os.path.join(WDDS_ROOT, "etc")
 # Load bundled libraries
 sys.path = [WDDS_LIB] + sys.path
 import tweepy
-import tweepy.models
 
 # Constants
 TIMEOUT = 60 * 60 # One hour
