@@ -14,9 +14,6 @@ WDDS_ETC = os.path.join(WDDS_ROOT, "etc")
 sys.path = [WDDS_LIB] + sys.path
 import tweepy
 
-# Constants
-TIMEOUT = 60 * 60 # One hour
-
 # TODO
 #  - Backfill option, to pull out tweets we have missed
 #    on startup
@@ -36,18 +33,6 @@ class AccountListener(tweepy.StreamListener):
     if text_lc.startswith("@" + self.__account_name) \
     or text_lc.startswith(".@" + self.__account_name):
       print data
-  
-  def on_timeout(self):
-    # The tweepy timeout handling has a bug when using OAuth: it
-    # attempts to establish a new connection using the same HTTP
-    # headers as previously, including the Authorization header.
-    # 
-    # Unfortunately this fails, because the oauth_timestamp is no
-    # longer correct and the oauth_nonce has been used before.
-    #
-    # Therefore we return False here, which causes the whole method
-    # to return, and implement a retry loop ourselves.
-    return False
 
 class TweetStreamer(object):
   def __init__(self, tweepy_api, own_user_id):
@@ -56,14 +41,11 @@ class TweetStreamer(object):
   
   def print_tweets_addressed_to(self, account_name):
     listener = AccountListener(self.tweepy_api, account_name, self.own_user_id)
-    while True:
-      # This will return on timeout, so we run it in a loop.
-      # See comment above.
-      tweepy.Stream(
-        self.tweepy_api.auth,
-        listener,
-        timeout = TIMEOUT,
-      ).filter(track = ["@" + account_name])
+    tweepy.Stream(
+      self.tweepy_api.auth,
+      listener,
+      timeout = None,
+    ).filter(track = ["@" + account_name])
 
 def main(args):
   from optparse import OptionParser
