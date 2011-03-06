@@ -1,9 +1,27 @@
 #!/usr/bin/python
 
+# Import the data from Openly Local's spending.csv file into Redis.
+#
+# Usage: import-data spending.csv
+#  (Run import-data --help to see other options)
+#
+#
+# This creates three hashes in Redis:
+#
+# suppliers: mapping supplier id to supplier name
+# organisations: mapping organisation id to organisation name
+# spending: The key is of the form <council id>/<supplier id>/YYYY[-MM]
+#           and the value is an amount of money, in pennies. Any of
+#           the components may be blank, which operates as a wildcard
+#           so (at the extreme) the key "//" gives the total spending
+#           in the entire dataset.
+
 # Built-in libraries
 import csv
 import logging
+import os
 import re
+import sys
 
 # The WDDS root directory is the parent of the directory this script is in
 WDDS_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), os.path.pardir))
@@ -19,20 +37,10 @@ def main(args):
   parser.add_option("-v", "--verbose",
                     action="store_true", default=False,
                     help="print detailed progress information")
-  parser.add_option("", "--redis-host",
+  parser.add_option("", "--redis",
                     action="store",
-                    default="localhost",
-                    help="host name for Redis server; defaults to %default")
-  parser.add_option("", "--redis-port",
-                    action="store",
-                    type="int",
-                    default=6379,
-                    help="port number for Redis server; defaults to %default")
-  parser.add_option("", "--redis-db",
-                    action="store",
-                    type="int",
-                    default=0,
-                    help="database number for Redis; defaults to %default")
+                    default="localhost:6379/0",
+                    help="connection details for Redis server; defaults to %default")
   
   (options, args) = parser.parse_args(list(args))
   
@@ -43,7 +51,11 @@ def main(args):
   spending_csv_filename = args[0]
   
   # Connect to the Redis server
-  r = redis.Redis(host=options.redis_host, port=options.redis_port, db=options.redis_db)
+  mo = re.match(r"([A-Za-z0-9.-]{1,255}):(\d+)/(\d|1[0-5])$", options.redis)
+  if mo is None:
+    parser.error("Failed to parse Redis spec: %s" % options.redis)
+  redis_host, redis_port, redis_db = mo.group(1), int(mo.group(2)), int(mo.group(3))
+  r = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
   r.flushdb() # Delete all existing data from this database
   
   spending_csv_fh = open(spending_csv_filename, 'r')
@@ -52,13 +64,22 @@ def main(args):
   known_suppliers = set()
   known_organisations = set() # "Organisations" means councils
   
+  # Set up a Redis pipeline, so we don't need a round-trip for
+  # each command. It doesn't need to be transactional, since we
+  # shall assume that no other process writes to the database.
+  pipeline = r.pipeline(transaction=False)
+  
   date_re = re.compile(r"^(\d\d\d\d)-(\d\d)-(\d\d)$")
   header_row = spending_csv_r.next()
   line_number = 1
   for data_row in spending_csv_r:
     line_number += 1
-    if line_number % 10000 == 0:
+    # Flush the Redis pipeline every 1000 rows,
+    # or we'll use a ridiculous amount of memory
+    # buffering up all the commands.
+    if line_number % 1000 == 0:
       logging.info("Processed %d,000 lines", line_number/1000)
+      pipeline.execute()
     
     d = dict(zip(header_row, data_row))
     
@@ -66,14 +87,14 @@ def main(args):
     supplier_id = d["supplier_openlylocal_id"]
     
     if supplier_id not in known_suppliers:
-      r.hset("suppliers", supplier_id, d["supplier_name"])
+      pipeline.hset("suppliers", supplier_id, d["supplier_name"])
       if d["payee_resource_uri"]:
-        r.hset("payee_resource_uri_by_supplier",
+        pipeline.hset("payee_resource_uri_by_supplier",
           supplier_id, d["payee_resource_uri"])
       known_suppliers.add(supplier_id)
     
     if council_id not in known_organisations:
-      r.hset("organisations", council_id, d["organisation_name"])
+      pipeline.hset("organisations", council_id, d["organisation_name"])
       known_organisations.add(council_id)
     
     date_mo = date_re.match(d["date"])
@@ -85,14 +106,15 @@ def main(args):
     
     year, month, day = date_mo.groups()
     
-    r.hincrby("total-cy", "%s-%s" % (council_id, year), value_in_pennies)
-    r.hincrby("total-cym", "%s-%s-%s" % (council_id, year, month), value_in_pennies)
-    r.hincrby("total-sy", "%s-%s" % (supplier_id, year), value_in_pennies)
-    r.hincrby("total-sym", "%s-%s-%s" % (supplier_id, year, month), value_in_pennies)
-    r.hincrby("total-csy", "%s-%s-%s" % (council_id, supplier_id, year), value_in_pennies)
-    r.hincrby("total-csym", "%s-%s-%s-%s" % (council_id, supplier_id, year, month), value_in_pennies)
+    for c in (council_id, ""):
+      for s in (supplier_id, ""):
+        for d in ("%s-%s" % (year, month), year, ""):
+          pipeline.hincrby("spending", "%s/%s/%s" % (c,s,d), value_in_pennies)
   
   spending_csv_fh.close()
+  
+  # Now send the remaining commands to Redis
+  pipeline.execute()
 
 if __name__ == "__main__":
   import sys

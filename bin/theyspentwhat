@@ -1,5 +1,14 @@
 #!/usr/bin/python -u
+# -*- encoding: utf-8 -*-
 
+# This is the actual query-responder. Takes tweets on stdin (JSON format
+# as used by Twitter, one per line) and returns responses on stdout (also
+# JSON objects, one per line, with keys "status" and "in_reply_to_status_id").
+#
+# Currently ambiguous queries are answered with the most interesting of the
+# possible answers, where interestingness is measured in pounds and pennies.
+
+import datetime
 import json
 import logging
 import os
@@ -14,13 +23,161 @@ WDDS_LIB = os.path.join(WDDS_ROOT, "lib")
 sys.path = [WDDS_LIB] + sys.path
 import redis
 
+# Constants
+CANNED_RESPONSES = {
+  "parse_error": "Sorry, I couldn't understand that!",
+  "no_results": "I didn't find any information matching your query.",
+}
+
+# Utility functions
+WORD_RE = re.compile(r"\w+")
+def tokenise(name):
+  return WORD_RE.findall(name.lower())
+
+def format_pennies(pennies_str):
+  """Take a string containing an integer number of pennies,
+  e.g. "999999", and return it as a formatted string, e.g. "£9,999.99".
+  """
+  if len(pennies_str) < 3:
+    return pennies_str + "p"
+  
+  pounds_reversed, pennies = pennies_str[-3::-1], int(pennies_str[-2:])
+  pounds_with_commas = re.sub(r"(\d{3}(?=.))", r"\1,", pounds_reversed)[::-1]
+  return u"£%s.%02d" % (pounds_with_commas, pennies)
+
+# Classes
 class DataMiner(object):
   def __init__(self, redis_connection):
     self.r = redis_connection
+    self._cache_names()
+  
+  def _cache_names(self):
+    self.org_index = self._build_index(self.r.hgetall("organisations"))
+    self.supplier_index = self._build_index(self.r.hgetall("suppliers"))
+    
+  def _build_index(self, d):
+    """Make an index from the supplied dictionary, in the form of a
+    dictionary mapping name tokens to sets of identifiers.
+    """
+    index = {}
+    for id, name in d.iteritems():
+      for token in tokenise(name):
+        index.setdefault(token, set()).add(id)
+    return index
+  
+  KEYWORDS = {
+    "on": "supplier",
+    "with": "supplier",
+    "in": "org",
+    "during": "date",
+  }
+  def _parse_question(self, question):
+    # Remove any @mentions and #tags
+    question = re.sub(r"(?:\.?@|#)\w+", "", question)
+    
+    parsed = {
+      "supplier": [],
+      "org": [],
+      "date": [],
+    }
+    section = "org"
+    for token in tokenise(question):
+      if token in self.KEYWORDS:
+        section = self.KEYWORDS[token]
+      else:
+        parsed[section].append(token)
+    
+    return parsed
+  
+  def _interpret(self, parsed_question):
+    """Interpret a parsed question.
+    """
+    return {
+      "org": self._interpretations(parsed_question["org"], self.org_index),
+      "supplier": self._interpretations(parsed_question["supplier"], self.supplier_index),
+      "date": self._interpret_date(parsed_question["date"])
+    }
+  
+  def _interpretations(self, tokens, index):
+    return reduce(lambda x,y: x.union(y), (
+      index.get(token, set()) for token in tokens
+    ), set())
+  
+  YEAR_RE = re.compile(r"^\d\d\d\d$")
+  MONTH_RE = re.compile(r"^(?:\d|0[1-9]|1[12])$")
+  MONTHS = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+    
+    "january": 1, "february": 2, "march": 3, "april": 4, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11,
+    "december": 12,
+    
+    "sept": 9, # September is the only month it seems natural to
+               # abbreviate to four characters, as well as three.
+  }
+  def _interpret_date(self, date_tokens):
+    month, year = None, datetime.date.today().year
+    
+    for token in date_tokens:
+      if self.YEAR_RE.match(token):
+        year = int(token)
+      elif self.MONTH_RE.match(token):
+        month = int(token)
+      elif token in self.MONTHS:
+        month = self.MONTHS[token]
+    
+    if month is None:
+      return "%04d" % year
+    else:
+      return "%04d-%02d" % (year, month)
   
   def compose_answer(self, question):
-    # XXXX - stub method: just reverses the first 100 chars of the input
-    return question[100::-1]
+    parsed_question = self._parse_question(question)
+    interpretation = self._interpret(parsed_question)
+    orgs, suppliers, date = map(interpretation.get, ("org", "supplier", "date"))
+    
+    if not orgs and not suppliers:
+      return CANNED_RESPONSES["parse_error"]
+    if not orgs:
+      orgs = set([""])
+    if not suppliers:
+      suppliers = set([""])
+    
+    keys = []
+    pipeline = self.r.pipeline()
+    for org in orgs:
+      for supplier in suppliers:
+        pipeline.hget("spending", "%s/%s/%s" % (org, supplier, date))
+        keys.append((org, supplier))
+    
+    results = filter(lambda (k,v): v, zip(keys, pipeline.execute()))
+    results.sort(key = lambda (k,v): v)
+    
+    if not results:
+      return CANNED_RESPONSES["no_results"]
+    
+    (org_id, supplier_id), value_in_pennies = results[0]
+    if not org_id:
+      return u"The UK local government spent %s with %s during %s" % (
+        format_pennies(value_in_pennies),
+        self.r.hget("suppliers", supplier_id),
+        datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
+      )
+    
+    if not supplier_id:
+      return u"%s spent %s total during %s" % (
+        self.r.hget("organisations", org_id),
+        format_pennies(value_in_pennies),
+        datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
+      )
+    
+    return u"%s spent %s with %s during %s" % (
+      self.r.hget("organisations", org_id),
+      format_pennies(value_in_pennies),
+      self.r.hget("suppliers", supplier_id),
+      datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
+    )
   
   def run(self):
     blank_line_re = re.compile(r"^\s*$")
@@ -38,26 +195,17 @@ class DataMiner(object):
         "in_reply_to_status_id": tweet["id_str"],
       })
 
+# Main program
 def main(args):
   from optparse import OptionParser
   parser = OptionParser(usage = "usage: %prog [options] spending.csv")
   parser.add_option("-v", "--verbose",
                     action="store_true", default=False,
                     help="print detailed progress information")
-  parser.add_option("", "--redis-host",
+  parser.add_option("", "--redis",
                     action="store",
-                    default="localhost",
-                    help="host name for Redis server; defaults to %default")
-  parser.add_option("", "--redis-port",
-                    action="store",
-                    type="int",
-                    default=6379,
-                    help="port number for Redis server; defaults to %default")
-  parser.add_option("", "--redis-db",
-                    action="store",
-                    type="int",
-                    default=0,
-                    help="database number for Redis; defaults to %default")
+                    default="localhost:6379/0",
+                    help="connection details for Redis server; defaults to %default")
   
   (options, args) = parser.parse_args(list(args))
   
@@ -66,8 +214,12 @@ def main(args):
   if len(args) != 0:
     parser.error("wrong number of arguments")
   
-  r = redis.Redis(host=options.redis_host, port=options.redis_port, db=options.redis_db)
+  mo = re.match(r"([A-Za-z0-9.-]{1,255}):(\d+)/(\d|1[0-5])$", options.redis)
+  if mo is None:
+    parser.error("Failed to parse Redis spec: %s" % options.redis)
+  redis_host, redis_port, redis_db = mo.group(1), int(mo.group(2)), int(mo.group(3))
   
+  r = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
   DataMiner(r).run()
 
 if __name__ == "__main__":
