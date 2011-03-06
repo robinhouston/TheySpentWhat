@@ -1,0 +1,24 @@
+Missing features:
+ - ability to specify councils by location rather than name, specifically by:
+   o postcode
+   o partial postcode
+   o geotagged tweets
+
+ - dialogues with the asker, to resolve serious ambiguity, e.g.
+  
+   @theyspentwhat in Cambridgeshire during 2010
+   @asker Do you mean 1) Cambridgeshire County Council, 2) East Cambridgeshire
+          or 3) South Cambridgeshire?
+   @theyspentwhat 1 (OR: @theyspentwhat county -- anything that unambiguously answers it)
+
+Other things that need doing:
+ - user-facing documentation (at least a web page)
+ - thorough testing
+ - trial with real users
+
+Nice to have:
+ - if it proved popular, a website showing common queries, recent queries
+
+ - some way to facilitate dialogue among Twitter users about the data
+   (a bit vague, this one, but only because there are so many ways one
+   could do it)
