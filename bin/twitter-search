@@ -1,5 +1,9 @@
 #!/usr/bin/python -u
 
+# Search for tweets addressed to a particular user, using the Twitter
+# streaming API, and print them to standard output one per line in JSON
+# format.
+
 import json
 import logging
 import os
@@ -19,6 +23,10 @@ import tweepy
 #    on startup
 
 class AccountListener(tweepy.StreamListener):
+  """A tweepy.StreamListener that simply prints any tweets
+  addressed to the specified account (excluding those also
+  posted by that account).
+  """
   def __init__(self, api, account_name, own_user_id):
     super(AccountListener, self).__init__(api)
     self.__account_name = account_name
@@ -58,7 +66,7 @@ def main(args):
                     help="print detailed progress information")
   parser.add_option("", "--trace-http",
                     action="store_true", default=False,
-                    help="enable HTTP tracing")
+                    help="enable HTTP tracing, for debugging")
   
   (options, args) = parser.parse_args(list(args))
   

@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+# Read tweets from standard input -- one per line, JSON format, with keys
+# "status" and (optionally) "in_reply_to_status_id" -- and post them to
+# Twitter using the account credentials found in the configuration file.
+
 import json
 import logging
 import os
