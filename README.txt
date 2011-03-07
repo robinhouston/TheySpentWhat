@@ -2,6 +2,9 @@ INTRODUCTION
 
 @theyspentwhat is a Twitter bot that answers queries about local government spending, using the spending data councils are now required to publish.
 
+See TODO.txt for a (probably partial) list of things it ought to be able to do,
+but can't yet.
+
 
 TWEET FORMAT
 
@@ -15,7 +18,8 @@ Time periods (months or years) can also be specified:
   @theyspentwhat in Islington on Alphatrack during 2010?
   @theyspentwhat in Islington on Alphatrack during April 2010?
 
-You can also use a leading dot in your tweet, so your followers will see the question too:
+You can also use a leading dot in your tweet, so your followers will see the
+question too:
   .@theyspentwhat in Islington on Alphatrack?
 
 The bot looks for the following keywords in the tweet to determine its meaning:
@@ -25,7 +29,7 @@ The bot looks for the following keywords in the tweet to determine its meaning:
 
 If no time period is specified, the bot will answer for the whole year of 2010.
 
-If a tweet has multiple equally-good interpretations then the bot will choose
+If a tweet has multiple possible interpretations then the bot will choose
 the most interesting of the possible answers. To the bot, "more interesting"
 is synonymous with "involving a larger amount of money".
 

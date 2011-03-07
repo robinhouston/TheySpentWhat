@@ -20,3 +20,11 @@ Instructions:
 Start the Redis server (redis-server)
 Load the data (bin/import-data spending.csv)
 Start the server (bin/run)
+
+
+Testing:
+
+Once the data have been loaded, you can test the bot on the command-line,
+without involving Twitter at all, by running
+
+  bin/theyspentwhat --readline

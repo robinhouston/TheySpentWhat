@@ -11,6 +11,10 @@ Missing features:
  
  - Intelligent truncation of response if it would be longer than 140 characters
  
+ - Make use of the "payee" identification in the Openly Local data to
+   group together transactions with the same company, even when they
+   appear under different supplier ids.
+ 
  - A nice profile pic and bio for the Twitter account
  
  - Ability to specify councils by location rather than name, specifically by:
