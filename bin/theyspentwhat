@@ -271,7 +271,7 @@ class DataMiner(object):
     # Now just run a plain text read/print loop, terminating on EOF
     while True:
       try:
-        question = raw_input("> ")
+        question = raw_input("@theyspentwhat ")
         print self.compose_answer(question)
       except EOFError:
         break
