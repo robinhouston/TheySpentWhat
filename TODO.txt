@@ -1,4 +1,5 @@
 Missing features:
+ essential:
  - A backfill option for bin/twitter-search, so we don't miss questions
    if the server is down for some reason. (At the moment only questions
    posted while the server is running can be answered, which is unacceptable.)
@@ -14,17 +15,36 @@ Missing features:
  - Make use of the "payee" identification in the Openly Local data to
    group together transactions with the same company, even when they
    appear under different supplier ids.
- 
- - A nice profile pic and bio for the Twitter account
- 
- - Ability to specify councils by location rather than name, specifically by:
-   o postcode
-   o partial postcode
-   o geotagged tweets
- 
+
+ - User-facing documentation (at least a web page). At the very least this
+   needs to explain how to use the service, and give a sense of the limitations
+   of the data.
+
+ nice to have:
  - Allow council names (at least) to be specified in abbreviated form,
    e.g. Cambs rather than Cambridgeshire.
  
+ - Dialogues with the asker, to resolve serious ambiguity, e.g.
+ 
+   @theyspentwhat in Cambridgeshire during 2010
+   @asker Do you mean 1) Cambridgeshire County Council, 2) East Cambridgeshire
+          or 3) South Cambridgeshire?
+   @theyspentwhat 1 (OR: @theyspentwhat county -- anything that unambiguously answers it)
+   
+   (The "most interesting" heuristic feels rather arbitrary in such cases.)
+ 
+ - A nice profile pic and bio for the Twitter account
+ 
+ - Allow individual transactions to be isolated, from vague queries. For
+   example, I can easily find out that the UK local government in aggregate
+   spent £2.5m with Warwickshire County Cricket Club in 2010, but there's
+   currently no way to tell that this was in the form of a single payment
+   by Birmingham City Council on 27 August.
+
+   Maybe this is just a simple tweak to the semantics: when no council is
+   specified, choose the one that results in the largest figure, rather
+   than giving the aggregate across all councils.
+
  - Make use of the spending classification, where available in the data.
    
    For example, investments are lumped in with spending as things stand,
@@ -39,18 +59,17 @@ Missing features:
    can be understood even if they're not "properly" formatted. (This would
    benefit from seeing how real users try to interact with it.)
  
- - Dialogues with the asker, to resolve serious ambiguity, e.g.
-  
-   @theyspentwhat in Cambridgeshire during 2010
-   @asker Do you mean 1) Cambridgeshire County Council, 2) East Cambridgeshire
-          or 3) South Cambridgeshire?
-   @theyspentwhat 1 (OR: @theyspentwhat county -- anything that unambiguously answers it)
+ - Ability to specify councils by location rather than name, specifically by:
+   o postcode
+   o partial postcode
+   o geotagged tweets
    
-   (The "most interesting" heuristic feels rather arbitrary in such cases.)
+   (Although the problem statement hinted heavily at this feature, I'm not
+   convinced it would be terribly useful. Everyone knows the name of their
+   own local council, and one is surely more likely to know the name rather
+   than the postcode of other places.)
 
 Other things that need doing:
- - User-facing documentation (at least a web page)
-
  - Get a better feeling for the limitations of the data.
    For example there are some entries with negative values: how should they be
    treated? But there must be many other limitations. The inconsistent date ranges
