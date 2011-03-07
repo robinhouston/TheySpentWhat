@@ -1,4 +1,14 @@
 Missing features:
+ - a backfill option for bin/twitter-search, so we don't miss questions
+   if the server is down for some reason. (At the moment only questions
+   posted while the server is running can be answered, which is unacceptable.)
+   
+   Presumably this would also involve tracking which questions have been answered,
+   probably in Redis since we're using it anyway and it's perfect for that sort
+   of thing, so that we don't answer the same question twice. That would have the
+   added benefit of coping with repetition in the streaming feed, which can happen
+   according to Twitter's documentation.
+ 
  - intelligent truncation of response if it would be longer than 140 characters
  
  - ability to specify councils by location rather than name, specifically by:
