@@ -202,27 +202,26 @@ class DataMiner(object):
     if not results:
       return CANNED_RESPONSES["no_results"]
     
+    if len(date) == 4:
+      formatted_date = date
+    else:
+      formatted_date = datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
+    
     (org_id, supplier_id), value_in_pennies = results[0]
+    org = self.r.hget("organisations", org_id) if org_id else None
+    supplier = self.r.hget("suppliers", supplier_id) if supplier_id else None
+    formatted_value = format_pennies(value_in_pennies)
+    
     if not org_id:
       return u"The UK local government spent %s with %s during %s" % (
-        format_pennies(value_in_pennies),
-        self.r.hget("suppliers", supplier_id),
-        datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
-      )
+        formatted_value, supplier, formatted_date)
     
     if not supplier_id:
       return u"%s spent %s total during %s" % (
-        self.r.hget("organisations", org_id),
-        format_pennies(value_in_pennies),
-        datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
-      )
+        org, formatted_value, formatted_date)
     
     return u"%s spent %s with %s during %s" % (
-      self.r.hget("organisations", org_id),
-      format_pennies(value_in_pennies),
-      self.r.hget("suppliers", supplier_id),
-      datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
-    )
+      org, formatted_value, supplier, formatted_date)
   
   def run(self, using_readline=False):
     if using_readline:
