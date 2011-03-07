@@ -6,7 +6,7 @@
 #  (Run import-data --help to see other options)
 #
 #
-# This creates four hashes in Redis:
+# This removes all data from the existing Redis database, and creates four hashes:
 #
 # suppliers: mapping supplier id to supplier name
 # organisations: mapping organisation id to organisation name
