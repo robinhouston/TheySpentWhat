@@ -1,20 +1,35 @@
 Missing features:
+ - intelligent truncation of response if it would be longer than 140 characters
+ 
  - ability to specify councils by location rather than name, specifically by:
    o postcode
    o partial postcode
    o geotagged tweets
 
+ - allow council names (at least) to be specified in abbreviated form,
+   e.g. Cambs rather than Cambridgeshire.
+ 
+ - make the tweet format more flexible, so that queries with an obvious meaning
+   can be understood even if they're not "properly" formatted. (This would
+   benefit from seeing how real users try to interact with it.)
+ 
  - dialogues with the asker, to resolve serious ambiguity, e.g.
   
    @theyspentwhat in Cambridgeshire during 2010
    @asker Do you mean 1) Cambridgeshire County Council, 2) East Cambridgeshire
           or 3) South Cambridgeshire?
    @theyspentwhat 1 (OR: @theyspentwhat county -- anything that unambiguously answers it)
+   
+   (The "most interesting" heuristic feels rather arbitrary in such cases.)
 
 Other things that need doing:
- - user-facing documentation (at least a web page)
- - thorough testing
- - trial with real users
+ - User-facing documentation (at least a web page)
+ - Get a better feeling for the limitations of the data.
+   For example there are some entries with negative values: how should they be
+   treated? But there must be many other limitations. The inconsistent date ranges
+   of available data make the whole lot trickier to interpret in aggregate, too.
+ - Thorough testing of all the edge cases, etc.
+ - Trial with real users
 
 Nice to have:
  - if it proved popular, a website showing common queries, recent queries
