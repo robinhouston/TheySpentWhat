@@ -97,6 +97,16 @@ class DataMiner(object):
   
   def _interpret(self, parsed_question):
     """Interpret a parsed question.
+    
+    Returns a dictionary with three keys:
+     org: a set of organisation ids corresponding to equally-plausible
+          interpretations of the query
+     supplier: a set of supplier ids corresponding to equally-plausible
+               interpretations of the query
+     date: the date, in YYYY or YYYY-MM format
+    
+    Any of these values may be None, to indicate that no data were
+    supplied for that 
     """
     return {
       "org": self._interpretations(parsed_question["org"], self.org_index),
