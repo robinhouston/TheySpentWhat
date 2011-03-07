@@ -78,6 +78,10 @@ class DataMiner(object):
     "during": "date",
   }
   def _parse_question(self, question):
+    """Parse the question, tokenising it and separating all
+    the non-keyword tokens into one of three buckets: supplier,
+    org, and date.
+    """
     # Remove any @mentions and #tags
     question = re.sub(r"(?:\.?@|#)\w+", "", question)
     
@@ -196,22 +200,24 @@ class DataMiner(object):
         pipeline.hget("spending", "%s/%s/%s" % (org, supplier, date))
         keys.append((org, supplier))
     
+    # Fetch all the results, and choose the most interesting one
     results = filter(lambda (k,v): v, zip(keys, pipeline.execute()))
-    results.sort(key = lambda (k,v): v)
-    
     if not results:
       return CANNED_RESPONSES["no_results"]
+    best_result = max(results, key = lambda (k,v): long(v))
     
+    # Format all the details for output
     if len(date) == 4:
       formatted_date = date
     else:
       formatted_date = datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
     
-    (org_id, supplier_id), value_in_pennies = results[0]
+    (org_id, supplier_id), value_in_pennies = best_result
     org = self.r.hget("organisations", org_id) if org_id else None
     supplier = self.r.hget("suppliers", supplier_id) if supplier_id else None
     formatted_value = format_pennies(value_in_pennies)
     
+    # Return an appropriate answer
     if not org_id:
       return u"The UK local government spent %s with %s during %s" % (
         formatted_value, supplier, formatted_date)
@@ -224,6 +230,9 @@ class DataMiner(object):
       org, formatted_value, supplier, formatted_date)
   
   def run(self, using_readline=False):
+    """The main runloop. Reads questions from stdin, and prints
+    answers on stdout. Runs until EOF on stdin.
+    """
     if using_readline:
       return self._run_using_readline()
     
@@ -252,7 +261,7 @@ class DataMiner(object):
     import atexit, readline
     
     # Use ~/.theyspentwhat-history as a readline history file
-    histfile = os.path.join(os.environ["HOME"], ".pyhist")
+    histfile = os.path.join(os.environ["HOME"], ".theyspentwhat-history")
     try:
       readline.read_history_file(histfile)
     except IOError:
