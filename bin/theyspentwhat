@@ -32,6 +32,7 @@ CANNED_RESPONSES = {
   "parse_error": "Sorry, I couldn't understand that!",
   "no_results": "I didn't find any information matching your query.",
 }
+DEFAULT_YEAR = 2010
 
 # Utility functions
 WORD_RE = re.compile(r"\w+")
@@ -122,7 +123,7 @@ class DataMiner(object):
                # abbreviate to four characters, as well as three.
   }
   def _interpret_date(self, date_tokens):
-    month, year = None, datetime.date.today().year
+    month, year = None, DEFAULT_YEAR
     
     for token in date_tokens:
       if self.YEAR_RE.match(token):
