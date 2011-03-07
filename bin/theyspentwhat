@@ -7,6 +7,10 @@
 #
 # Currently ambiguous queries are answered with the most interesting of the
 # possible answers, where interestingness is measured in pounds and pennies.
+#
+# For testing, you can pass the --plain or --readline switches, which use
+# plain text input and output. The --readline switch additionally uses
+# GNU readline for input, which enables history, editing, etc.
 
 import datetime
 import json
@@ -47,8 +51,9 @@ def format_pennies(pennies_str):
 
 # Classes
 class DataMiner(object):
-  def __init__(self, redis_connection):
+  def __init__(self, redis_connection, plain=False):
     self.r = redis_connection
+    self.plain = plain
     self._cache_names()
   
   def _cache_names(self):
@@ -179,7 +184,10 @@ class DataMiner(object):
       datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
     )
   
-  def run(self):
+  def run(self, using_readline=False):
+    if using_readline:
+      return self._run_using_readline()
+    
     blank_line_re = re.compile(r"^\s*$")
     while True:
       line = sys.stdin.readline()
@@ -188,12 +196,37 @@ class DataMiner(object):
       if blank_line_re.match(line):
         continue # Ignore blank lines
       
-      tweet = json.loads(line)
-      answer = self.compose_answer(tweet["text"])
-      print json.dumps({
-        "status": "@%s %s" % (tweet["user"]["screen_name"], answer),
-        "in_reply_to_status_id": tweet["id_str"],
-      })
+      if self.plain:
+        question = line.decode("utf-8")
+        answer = self.compose_answer(question)
+        print answer
+      
+      else:
+        tweet = json.loads(line)
+        answer = self.compose_answer(tweet["text"])
+        print json.dumps({
+          "status": "@%s %s" % (tweet["user"]["screen_name"], answer),
+          "in_reply_to_status_id": tweet["id_str"],
+        })
+  
+  def _run_using_readline(self):
+    import atexit, readline
+    
+    # Use ~/.theyspentwhat-history as a readline history file
+    histfile = os.path.join(os.environ["HOME"], ".pyhist")
+    try:
+      readline.read_history_file(histfile)
+    except IOError:
+      pass
+    atexit.register(readline.write_history_file, histfile)
+    
+    # Now just run a plain text read/print loop, terminating on EOF
+    while True:
+      try:
+        question = raw_input("> ")
+        print self.compose_answer(question)
+      except EOFError:
+        break
 
 # Main program
 def main(args):
@@ -202,6 +235,12 @@ def main(args):
   parser.add_option("-v", "--verbose",
                     action="store_true", default=False,
                     help="print detailed progress information")
+  parser.add_option("", "--plain",
+                    action="store_true", default=False,
+                    help="take input/output in plain text (UTF-8), rather than JSON")
+  parser.add_option("", "--readline",
+                    action="store_true", default=False,
+                    help="use readline for input (implies --plain)")
   parser.add_option("", "--redis",
                     action="store",
                     default="localhost:6379/0",
@@ -220,7 +259,7 @@ def main(args):
   redis_host, redis_port, redis_db = mo.group(1), int(mo.group(2)), int(mo.group(3))
   
   r = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
-  DataMiner(r).run()
+  DataMiner(r, options.plain or options.readline).run(options.readline)
 
 if __name__ == "__main__":
   main(sys.argv[1:])
