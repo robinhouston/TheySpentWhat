@@ -6,7 +6,7 @@
 #  (Run import-data --help to see other options)
 #
 #
-# This creates three hashes in Redis:
+# This creates four hashes in Redis:
 #
 # suppliers: mapping supplier id to supplier name
 # organisations: mapping organisation id to organisation name
@@ -15,6 +15,13 @@
 #           the components may be blank, which operates as a wildcard
 #           so (at the extreme) the key "//" gives the total spending
 #           in the entire dataset.
+# payee_resource_uri_by_supplier: Maps the supplier id to the
+#            payee resource URI, which is not always available, but
+#            where it is present makes it possible to identify when the
+#            same organisation appears under multiple supplier ids.
+#            (At the time of writing, the application does not yet
+#            take advantage of this opportunity.)
+
 
 # Built-in libraries
 import csv
