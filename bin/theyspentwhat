@@ -115,9 +115,38 @@ class DataMiner(object):
     }
   
   def _interpretations(self, tokens, index):
-    return reduce(lambda x,y: x.union(y), (
-      index.get(token, set()) for token in tokens
-    ), set())
+    """Take a set (well, any iterable object) of tokens, and a
+    corresponding index, and return all the equally-plausible
+    interpretations of it.
+    
+    Plausibility is measured by the number of common words
+    between the provided tokens and the actual name of the
+    organisation.
+    
+    For example, "cambridgeshire" can be interpreted equally
+    plausibly to mean any of:
+     - Cambridgeshire County Council,
+     - East Cambridgeshire
+     - South Cambridgeshire,
+    whereas ("cambridgeshire", "east") has a unique most-plausible
+    interpretation.
+    """
+    number_of_occurences = {}
+    max_number_of_occurences = 0
+    result = set()
+    
+    for token in tokens:
+      for org_id in index.get(token, set()):
+        n = 1 + number_of_occurences.get(org_id, 0)
+        logging.debug("org id %s occurs %d times after '%s'", org_id, n, token)
+        number_of_occurences[org_id] = n
+        if n > max_number_of_occurences:
+          max_number_of_occurences = n
+          result = set([org_id])
+        elif n == max_number_of_occurences:
+          result.add(org_id)
+    
+    return result
   
   YEAR_RE = re.compile(r"^\d\d\d\d$")
   MONTH_RE = re.compile(r"^(?:\d|0[1-9]|1[12])$")
