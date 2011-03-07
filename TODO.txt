@@ -1,5 +1,5 @@
 Missing features:
- - a backfill option for bin/twitter-search, so we don't miss questions
+ - A backfill option for bin/twitter-search, so we don't miss questions
    if the server is down for some reason. (At the moment only questions
    posted while the server is running can be answered, which is unacceptable.)
    
@@ -9,21 +9,33 @@ Missing features:
    added benefit of coping with repetition in the streaming feed, which can happen
    according to Twitter's documentation.
  
- - intelligent truncation of response if it would be longer than 140 characters
+ - Intelligent truncation of response if it would be longer than 140 characters
  
- - ability to specify councils by location rather than name, specifically by:
+ - A nice profile pic and bio for the Twitter account
+ 
+ - Ability to specify councils by location rather than name, specifically by:
    o postcode
    o partial postcode
    o geotagged tweets
-
- - allow council names (at least) to be specified in abbreviated form,
+ 
+ - Allow council names (at least) to be specified in abbreviated form,
    e.g. Cambs rather than Cambridgeshire.
  
- - make the tweet format more flexible, so that queries with an obvious meaning
+ - Make use of the spending classification, where available in the data.
+   
+   For example, investments are lumped in with spending as things stand,
+   which is odd since money that has been invested has not actually been
+   spent in the way that most people would understand the word.
+   
+   Also it would be nice if users could ask for totals in a particular
+   category, say. One would need to look harder at the data to understand
+   precisely what could be done with this.
+ 
+ - Make the tweet format more flexible, so that queries with an obvious meaning
    can be understood even if they're not "properly" formatted. (This would
    benefit from seeing how real users try to interact with it.)
  
- - dialogues with the asker, to resolve serious ambiguity, e.g.
+ - Dialogues with the asker, to resolve serious ambiguity, e.g.
   
    @theyspentwhat in Cambridgeshire during 2010
    @asker Do you mean 1) Cambridgeshire County Council, 2) East Cambridgeshire
@@ -34,16 +46,16 @@ Missing features:
 
 Other things that need doing:
  - User-facing documentation (at least a web page)
+
  - Get a better feeling for the limitations of the data.
    For example there are some entries with negative values: how should they be
    treated? But there must be many other limitations. The inconsistent date ranges
    of available data make the whole lot trickier to interpret in aggregate, too.
+
  - Thorough testing of all the edge cases, etc.
+
  - Trial with real users
 
-Nice to have:
- - if it proved popular, a website showing common queries, recent queries
-
- - some way to facilitate dialogue among Twitter users about the data
-   (a bit vague, this one, but only because there are so many ways one
-   could do it)
+Vague ideas:
+ - Some way to facilitate online conversation about the data.
+   Maybe a hashtag, and archive tagged conversations on a web site?
