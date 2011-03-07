@@ -1,15 +1,16 @@
 Prerequisites:
 
 - Python 2.6
-    [Should also work with 2.7, and could be made to work with earlier
-     versions by installing the simplejson module and changing all
-     occurences of "import json" to "import simplejson as json" in the
-     Python code. If Python is installed somewhere other than /usr/bin
-     then you'll need to edit the shebang lines.]
+     Should also work with 2.7, and could be made to work with 2.5
+     by installing the simplejson module and changing all occurences
+     of "import json" to "import simplejson as json" in the Python code.
+     
+     If Python is installed somewhere other than /usr/bin
+     then you'll need to edit the shebang lines.
 
 - Redis 2.2.1
-    [Almost certainly works with other versions too. This is just the
-     version it has been tested with.]
+    Almost certainly works with other versions too. This is just the
+    version it has been tested with.
 
 - Download and unzip http://openlylocal.com/councils/spending.csv.zip
 
