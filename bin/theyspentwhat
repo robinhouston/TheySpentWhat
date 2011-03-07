@@ -7,10 +7,6 @@
 #
 # Currently ambiguous queries are answered with the most interesting of the
 # possible answers, where interestingness is measured in pounds and pennies.
-#
-# For testing, you can pass the --plain or --readline switches, which use
-# plain text input and output. The --readline switch additionally uses
-# GNU readline for input, which enables history, editing, etc.
 
 import datetime
 import json
@@ -32,7 +28,6 @@ CANNED_RESPONSES = {
   "parse_error": "Sorry, I couldn't understand that!",
   "no_results": "I didn't find any information matching your query.",
 }
-DEFAULT_YEAR = 2010
 
 # Utility functions
 WORD_RE = re.compile(r"\w+")
@@ -52,9 +47,8 @@ def format_pennies(pennies_str):
 
 # Classes
 class DataMiner(object):
-  def __init__(self, redis_connection, plain=False):
+  def __init__(self, redis_connection):
     self.r = redis_connection
-    self.plain = plain
     self._cache_names()
   
   def _cache_names(self):
@@ -97,16 +91,6 @@ class DataMiner(object):
   
   def _interpret(self, parsed_question):
     """Interpret a parsed question.
-    
-    Returns a dictionary with three keys:
-     org: a set of organisation ids corresponding to equally-plausible
-          interpretations of the query
-     supplier: a set of supplier ids corresponding to equally-plausible
-               interpretations of the query
-     date: the date, in YYYY or YYYY-MM format
-    
-    Any of these values may be None, to indicate that no data were
-    supplied for that 
     """
     return {
       "org": self._interpretations(parsed_question["org"], self.org_index),
@@ -115,38 +99,9 @@ class DataMiner(object):
     }
   
   def _interpretations(self, tokens, index):
-    """Take a set (well, any iterable object) of tokens, and a
-    corresponding index, and return all the equally-plausible
-    interpretations of it.
-    
-    Plausibility is measured by the number of common words
-    between the provided tokens and the actual name of the
-    organisation.
-    
-    For example, "cambridgeshire" can be interpreted equally
-    plausibly to mean any of:
-     - Cambridgeshire County Council,
-     - East Cambridgeshire
-     - South Cambridgeshire,
-    whereas ("cambridgeshire", "east") has a unique most-plausible
-    interpretation.
-    """
-    number_of_occurences = {}
-    max_number_of_occurences = 0
-    result = set()
-    
-    for token in tokens:
-      for org_id in index.get(token, set()):
-        n = 1 + number_of_occurences.get(org_id, 0)
-        logging.debug("org id %s occurs %d times after '%s'", org_id, n, token)
-        number_of_occurences[org_id] = n
-        if n > max_number_of_occurences:
-          max_number_of_occurences = n
-          result = set([org_id])
-        elif n == max_number_of_occurences:
-          result.add(org_id)
-    
-    return result
+    return reduce(lambda x,y: x.union(y), (
+      index.get(token, set()) for token in tokens
+    ), set())
   
   YEAR_RE = re.compile(r"^\d\d\d\d$")
   MONTH_RE = re.compile(r"^(?:\d|0[1-9]|1[12])$")
@@ -162,7 +117,7 @@ class DataMiner(object):
                # abbreviate to four characters, as well as three.
   }
   def _interpret_date(self, date_tokens):
-    month, year = None, DEFAULT_YEAR
+    month, year = None, datetime.date.today().year
     
     for token in date_tokens:
       if self.YEAR_RE.match(token):
@@ -202,31 +157,29 @@ class DataMiner(object):
     if not results:
       return CANNED_RESPONSES["no_results"]
     
-    if len(date) == 4:
-      formatted_date = date
-    else:
-      formatted_date = datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
-    
     (org_id, supplier_id), value_in_pennies = results[0]
-    org = self.r.hget("organisations", org_id) if org_id else None
-    supplier = self.r.hget("suppliers", supplier_id) if supplier_id else None
-    formatted_value = format_pennies(value_in_pennies)
-    
     if not org_id:
       return u"The UK local government spent %s with %s during %s" % (
-        formatted_value, supplier, formatted_date)
+        format_pennies(value_in_pennies),
+        self.r.hget("suppliers", supplier_id),
+        datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
+      )
     
     if not supplier_id:
       return u"%s spent %s total during %s" % (
-        org, formatted_value, formatted_date)
+        self.r.hget("organisations", org_id),
+        format_pennies(value_in_pennies),
+        datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
+      )
     
     return u"%s spent %s with %s during %s" % (
-      org, formatted_value, supplier, formatted_date)
+      self.r.hget("organisations", org_id),
+      format_pennies(value_in_pennies),
+      self.r.hget("suppliers", supplier_id),
+      datetime.datetime.strptime(date, "%Y-%m").strftime("%b %Y")
+    )
   
-  def run(self, using_readline=False):
-    if using_readline:
-      return self._run_using_readline()
-    
+  def run(self):
     blank_line_re = re.compile(r"^\s*$")
     while True:
       line = sys.stdin.readline()
@@ -235,37 +188,12 @@ class DataMiner(object):
       if blank_line_re.match(line):
         continue # Ignore blank lines
       
-      if self.plain:
-        question = line.decode("utf-8")
-        answer = self.compose_answer(question)
-        print answer
-      
-      else:
-        tweet = json.loads(line)
-        answer = self.compose_answer(tweet["text"])
-        print json.dumps({
-          "status": "@%s %s" % (tweet["user"]["screen_name"], answer),
-          "in_reply_to_status_id": tweet["id_str"],
-        })
-  
-  def _run_using_readline(self):
-    import atexit, readline
-    
-    # Use ~/.theyspentwhat-history as a readline history file
-    histfile = os.path.join(os.environ["HOME"], ".pyhist")
-    try:
-      readline.read_history_file(histfile)
-    except IOError:
-      pass
-    atexit.register(readline.write_history_file, histfile)
-    
-    # Now just run a plain text read/print loop, terminating on EOF
-    while True:
-      try:
-        question = raw_input("> ")
-        print self.compose_answer(question)
-      except EOFError:
-        break
+      tweet = json.loads(line)
+      answer = self.compose_answer(tweet["text"])
+      print json.dumps({
+        "status": "@%s %s" % (tweet["user"]["screen_name"], answer),
+        "in_reply_to_status_id": tweet["id_str"],
+      })
 
 # Main program
 def main(args):
@@ -274,12 +202,6 @@ def main(args):
   parser.add_option("-v", "--verbose",
                     action="store_true", default=False,
                     help="print detailed progress information")
-  parser.add_option("", "--plain",
-                    action="store_true", default=False,
-                    help="take input/output in plain text (UTF-8), rather than JSON")
-  parser.add_option("", "--readline",
-                    action="store_true", default=False,
-                    help="use readline for input (implies --plain)")
   parser.add_option("", "--redis",
                     action="store",
                     default="localhost:6379/0",
@@ -298,7 +220,7 @@ def main(args):
   redis_host, redis_port, redis_db = mo.group(1), int(mo.group(2)), int(mo.group(3))
   
   r = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
-  DataMiner(r, options.plain or options.readline).run(options.readline)
+  DataMiner(r).run()
 
 if __name__ == "__main__":
   main(sys.argv[1:])
