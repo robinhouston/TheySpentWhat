@@ -67,4 +67,4 @@ output.
 
 tweet: Reads tweets from standard input and posts them to Twitter.
 
--- [Author name redacted], 2011-03
+-- Robin Houston, 2011-03
